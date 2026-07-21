@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}LAN Gateway - Admin Sign In{% endblock %}
+
+{% block content %}
+<div class="glass-card animate-fade-in" style="max-width: 420px;">
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <h2 style="font-weight: 700; margin-bottom: 0.5rem; background: linear-gradient(to right, #a5b4fc, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 1.75rem;">LAN Gateway</h2>
+        <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">ADMINISTRATIVE AUTHENTICATION</p>
+    </div>
+
+    <!-- Flash message display container -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flashes">
+            {% for category, message in messages %}
+                <li class="flash {{ category }}">{{ message }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Authorization credentials form -->
+    <form method="POST" action="{{ url_for('auth.login') }}">
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" placeholder="Enter username" required autocomplete="username" autofocus>
+        </div>
+        <div class="form-group" style="margin-bottom: 2rem;">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" placeholder="Enter password" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn" style="width: 100%;">Sign In</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{
+    "ips": [
+        {
+            "ip": "127.0.0.1",
+            "description": "Admin Loopback",
+            "added_by": "system",
+            "added_at": ""
+        }
+    ]
+}

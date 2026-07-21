@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Access Denied - LAN Gateway{% endblock %}
+
+{% block extra_head %}
+<style>
+    .denied-icon {
+        font-size: 4.5rem;
+        color: var(--danger);
+        margin-bottom: 1.5rem;
+        animation: pulse 2s infinite;
+        text-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.8; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="glass-card animate-fade-in" style="max-width: 460px; text-align: center;">
+    <div class="denied-icon">🔒</div>
+    <h2 style="font-weight: 700; margin-bottom: 0.5rem; background: linear-gradient(to right, #fca5a5, #f87171); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 1.75rem;">Access Denied</h2>
+    <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 2rem;">Security Gateway Enforced</p>
+    
+    <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; padding: 1.25rem; margin-bottom: 2rem;">
+        <p style="font-size: 0.92rem; line-height: 1.6; color: #fca5a5;">
+            Your client IP address <code style="background: rgba(0, 0, 0, 0.2); padding: 0.2rem 0.4rem; border-radius: 4px; font-weight: 600; color: #fecaca;">{{ ip }}</code> is not registered in the access whitelist configuration.
+        </p>
+    </div>
+    
+    <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 2rem;">
+        To request access, please contact the local network administrator and provide your client IP address shown above.
+    </p>
+    
+    <a href="{{ url_for('auth.login') }}" class="btn btn-secondary" style="width: 100%;">Admin Login</a>
+</div>
+{% endblock %}

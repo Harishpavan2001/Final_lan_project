@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+build/
+dist/
+*.egg-info/
+
+# Databases
+database/*.db
+database/*.db-journal
+
+# Environment / Configuration
+.env
+
+# Logs
+logs/*.log
+
+# Nginx Certificates
+nginx/certs/
+!nginx/certs/.gitkeep
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
