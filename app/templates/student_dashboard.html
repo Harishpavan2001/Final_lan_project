@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}LAN Gateway - Student Dashboard{% endblock %}
+
+{% block extra_head %}
+<style>
+    .dashboard-container {
+        max-width: 820px;
+        width: 95%;
+        margin: 2rem auto;
+    }
+
+    .nav-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 1.25rem;
+    }
+
+    .logo-section {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .logo-title {
+        font-size: 1.35rem;
+        font-weight: 700;
+        background: linear-gradient(to right, #a5b4fc, #818cf8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .logo-subtitle {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-weight: 600;
+        margin-top: 0.1rem;
+    }
+
+    .user-badge {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .user-name {
+        font-size: 0.88rem;
+        color: var(--text-muted);
+    }
+
+    .info-panel {
+        background: rgba(15, 23, 42, 0.35);
+        padding: 1.75rem;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.9rem;
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        color: var(--text-muted);
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+        color: #a7f3d0;
+        padding: 0.3rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    .exam-card {
+        background: rgba(15, 23, 42, 0.3);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 0.9rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .exam-card .exam-title { font-weight: 600; font-size: 0.98rem; margin-bottom: 0.3rem; }
+    .exam-card .exam-meta { font-size: 0.78rem; color: var(--text-muted); }
+
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.68rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-left: 0.5rem;
+    }
+    .status-scheduled { background: rgba(14, 165, 233, 0.12); border: 1px solid rgba(14, 165, 233, 0.25); color: #bae6fd; }
+    .status-live { background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25); color: #a7f3d0; }
+    .status-closed { background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: #fca5a5; }
+
+    .empty-exams { text-align: center; padding: 2.5rem; color: var(--text-muted); font-style: italic; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="glass-card animate-fade-in" style="padding: 2.25rem;">
+
+        <!-- Dashboard Navigation Header -->
+        <header class="nav-header">
+            <div class="logo-section">
+                <div class="logo-title">Student Portal</div>
+                <div class="logo-subtitle">Secure Examination Access</div>
+            </div>
+            <div class="user-badge">
+                <span class="user-name">Signed in as <strong>{{ current_user.username }}</strong></span>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</a>
+            </div>
+        </header>
+
+        <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: #a5b4fc;">Welcome, {{ current_user.full_name or current_user.username }}</h3>
+
+        <div class="info-panel">
+            <div class="info-row">
+                <span class="info-label">Access Status</span>
+                <span class="status-badge">● Connection Authorized</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Username</span>
+                <span>{{ current_user.username }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Email</span>
+                <span>{{ current_user.email or '—' }}</span>
+            </div>
+        </div>
+
+        <p style="margin-top: 1.5rem; font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
+            💡 You are connected from an authorized lab machine on the examination network.
+        </p>
+
+        <h3 style="font-size: 1.1rem; font-weight: 600; margin: 2rem 0 1rem; color: #a5b4fc;">Available Exams</h3>
+
+        {% if exam_rows %}
+            {% for row in exam_rows %}
+                {% set exam = row.exam %}
+                {% set attempt = row.attempt %}
+                <div class="exam-card">
+                    <div>
+                        <div class="exam-title">
+                            {{ exam.title }}
+                            <span class="status-pill status-{{ exam.status }}">{{ exam.status }}</span>
+                        </div>
+                        <div class="exam-meta">
+                            {{ exam.start_time.strftime('%d %b %Y, %H:%M') }} &mdash; {{ exam.end_time.strftime('%d %b %Y, %H:%M') }}
+                            &nbsp;|&nbsp; Duration: {{ exam.duration_minutes }} min
+                        </div>
+                    </div>
+
+                    {% if attempt and attempt.is_submitted %}
+                        <a href="{{ url_for('student.exam_result', exam_id=exam.id) }}" class="btn btn-secondary">View Result</a>
+                    {% elif attempt and not attempt.is_submitted %}
+                        {% if exam.status == 'live' %}
+                            <a href="{{ url_for('student.take_exam', exam_id=exam.id) }}" class="btn">Resume Exam</a>
+                        {% else %}
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">Exam window closed</span>
+                        {% endif %}
+                    {% elif exam.status == 'live' %}
+                        <form method="POST" action="{{ url_for('student.start_exam', exam_id=exam.id) }}">
+                            <button type="submit" class="btn">Start Exam</button>
+                        </form>
+                    {% elif exam.status == 'scheduled' %}
+                        <span style="font-size: 0.8rem; color: var(--text-muted);">Not yet open</span>
+                    {% else %}
+                        <span style="font-size: 0.8rem; color: var(--text-muted);">Exam window closed</span>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="exam-card empty-exams" style="display: block;">No exams are currently available. Please check back later.</div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+
+{% block title %}LAN Gateway - Exam Management{% endblock %}
+
+{% block extra_head %}
+<style>
+    .dashboard-container {
+        max-width: 1100px;
+        width: 95%;
+        margin: 2rem auto;
+    }
+
+    .nav-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 1.25rem;
+    }
+
+    .logo-section { display: flex; flex-direction: column; }
+
+    .logo-title {
+        font-size: 1.35rem;
+        font-weight: 700;
+        background: linear-gradient(to right, #a5b4fc, #818cf8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .logo-subtitle {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-weight: 600;
+        margin-top: 0.1rem;
+    }
+
+    .user-badge { display: flex; align-items: center; gap: 1rem; }
+    .user-name { font-size: 0.88rem; color: var(--text-muted); }
+
+    .grid-layout {
+        display: grid;
+        grid-template-columns: 1.8fr 1fr;
+        gap: 2rem;
+    }
+
+    @media (max-width: 820px) {
+        .grid-layout { grid-template-columns: 1fr; }
+    }
+
+    .table-container {
+        overflow-x: auto;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: rgba(15, 23, 42, 0.3);
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    th, td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+    }
+
+    th {
+        color: var(--text-muted);
+        font-weight: 600;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: rgba(15, 23, 42, 0.2);
+    }
+
+    td { font-size: 0.88rem; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255, 255, 255, 0.015); }
+
+    .empty-state {
+        text-align: center;
+        padding: 3.5rem;
+        color: var(--text-muted);
+        font-style: italic;
+    }
+
+    .form-panel {
+        background: rgba(15, 23, 42, 0.35);
+        padding: 1.75rem;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        align-self: start;
+    }
+
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .status-draft { background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.25); color: #cbd5e1; }
+    .status-scheduled { background: rgba(14, 165, 233, 0.12); border: 1px solid rgba(14, 165, 233, 0.25); color: #bae6fd; }
+    .status-live { background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25); color: #a7f3d0; }
+    .status-closed { background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: #fca5a5; }
+
+    .action-btns { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .action-btns .btn { padding: 0.35rem 0.7rem; font-size: 0.72rem; }
+
+    textarea {
+        width: 100%;
+        background: rgba(15, 23, 42, 0.5);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        color: var(--text-main);
+        font-size: 0.9rem;
+        resize: vertical;
+        min-height: 70px;
+    }
+
+    textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="glass-card animate-fade-in" style="padding: 2.25rem;">
+
+        <header class="nav-header">
+            <div class="logo-section">
+                <div class="logo-title">Exam Management</div>
+                <div class="logo-subtitle">Create, Schedule &amp; Publish Examinations</div>
+            </div>
+            <div class="user-badge">
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">IP Whitelist</a>
+                <span class="user-name">Signed in as <strong>{{ current_user.username }}</strong></span>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</a>
+            </div>
+        </header>
+
+        <!-- Flash message display container -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="flash {{ category }}">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        <div class="grid-layout">
+
+            <!-- LEFT PANEL: Exam List -->
+            <div>
+                <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: #a5b4fc;">All Exams</h3>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Schedule</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                                <th style="width: 180px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="exams-table-body">
+                            {% if exams %}
+                                {% for exam in exams %}
+                                <tr id="exam-row-{{ exam.id }}">
+                                    <td>
+                                        <strong>{{ exam.title }}</strong>
+                                        {% if exam.description %}
+                                        <div style="color: var(--text-muted); font-size: 0.78rem; margin-top: 0.2rem;">{{ exam.description }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td style="font-size: 0.8rem; color: var(--text-muted);">
+                                        {{ exam.start_time.strftime('%d %b %Y, %H:%M') }}<br>to {{ exam.end_time.strftime('%d %b %Y, %H:%M') }}
+                                    </td>
+                                    <td>{{ exam.duration_minutes }} min</td>
+                                    <td><span class="status-pill status-{{ exam.status }}">{{ exam.status }}</span></td>
+                                    <td>
+                                        <div class="action-btns">
+                                            <a href="{{ url_for('main.questions', exam_id=exam.id) }}" class="btn btn-secondary">Questions</a>
+                                            <a href="{{ url_for('main.exam_results', exam_id=exam.id) }}" class="btn btn-secondary">Results</a>
+                                            <button type="button" class="btn btn-secondary edit-exam-btn"
+                                                data-id="{{ exam.id }}"
+                                                data-title="{{ exam.title }}"
+                                                data-description="{{ exam.description or '' }}"
+                                                data-duration="{{ exam.duration_minutes }}"
+                                                data-start="{{ exam.start_time.strftime('%Y-%m-%dT%H:%M') }}"
+                                                data-end="{{ exam.end_time.strftime('%Y-%m-%dT%H:%M') }}"
+                                                data-pass="{{ exam.pass_percentage }}">Edit</button>
+                                            <button type="button" class="btn publish-exam-btn" data-id="{{ exam.id }}">
+                                                {{ 'Unpublish' if exam.is_published else 'Publish' }}
+                                            </button>
+                                            <button type="button" class="btn btn-danger delete-exam-btn" data-id="{{ exam.id }}" data-title="{{ exam.title }}">Delete</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr id="empty-row">
+                                    <td colspan="5" class="empty-state">No exams created yet. Use the form to create your first exam.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: Create / Edit Form -->
+            <div class="form-panel">
+                <h3 id="form-title" style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1.25rem; color: #a5b4fc;">Create New Exam</h3>
+
+                <form id="exam-form" method="POST" action="{{ url_for('main.create_exam') }}">
+                    <input type="hidden" id="exam-id" value="">
+                    <div class="form-group">
+                        <label for="title">Exam Title</label>
+                        <input type="text" id="title" name="title" placeholder="e.g. Data Structures Mid-Term" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" name="description" placeholder="Optional notes or instructions"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="duration_minutes">Duration (minutes)</label>
+                        <input type="number" id="duration_minutes" name="duration_minutes" placeholder="e.g. 90" min="1" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="start_time">Start Date &amp; Time</label>
+                        <input type="datetime-local" id="start_time" name="start_time" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1.75rem;">
+                        <label for="end_time">End Date &amp; Time</label>
+                        <input type="datetime-local" id="end_time" name="end_time" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1.75rem;">
+                        <label for="pass_percentage">Passing Percentage</label>
+                        <input type="number" id="pass_percentage" name="pass_percentage" value="40" min="0" max="100" step="0.5">
+                    </div>
+                    <button type="submit" id="exam-submit-btn" class="btn" style="width: 100%;">Create Exam</button>
+                    <button type="button" id="exam-cancel-btn" class="btn btn-secondary" style="width: 100%; margin-top: 0.6rem; display: none;">Cancel Edit</button>
+                </form>
+
+                <div style="margin-top: 1.5rem; font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; border-top: 1px solid var(--border); padding-top: 1rem;">
+                    <p>💡 <strong>Note:</strong> Exams are created as drafts. Use "Publish" to make an exam active for its scheduled window.</p>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const examForm = document.getElementById('exam-form');
+    const examIdField = document.getElementById('exam-id');
+    const formTitle = document.getElementById('form-title');
+    const submitBtn = document.getElementById('exam-submit-btn');
+    const cancelBtn = document.getElementById('exam-cancel-btn');
+
+    function resetForm() {
+        examForm.reset();
+        examIdField.value = '';
+        examForm.action = "{{ url_for('main.create_exam') }}";
+        formTitle.innerText = 'Create New Exam';
+        submitBtn.innerText = 'Create Exam';
+        cancelBtn.style.display = 'none';
+    }
+
+    cancelBtn.addEventListener('click', resetForm);
+
+    // Populate the form for editing an existing exam
+    document.querySelectorAll('.edit-exam-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const id = this.dataset.id;
+            document.getElementById('title').value = this.dataset.title;
+            document.getElementById('description').value = this.dataset.description;
+            document.getElementById('duration_minutes').value = this.dataset.duration;
+            document.getElementById('start_time').value = this.dataset.start;
+            document.getElementById('end_time').value = this.dataset.end;
+            document.getElementById('pass_percentage').value = this.dataset.pass;
+
+            examIdField.value = id;
+            examForm.action = `/exams/${id}/edit`;
+            formTitle.innerText = `Edit Exam #${id}`;
+            submitBtn.innerText = 'Save Changes';
+            cancelBtn.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+
+    // AJAX submit for both create and edit (same form, action URL changes)
+    examForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        submitBtn.disabled = true;
+
+        const payload = {
+            title: document.getElementById('title').value.trim(),
+            description: document.getElementById('description').value.trim(),
+            duration_minutes: document.getElementById('duration_minutes').value.trim(),
+            start_time: document.getElementById('start_time').value,
+            end_time: document.getElementById('end_time').value,
+            pass_percentage: document.getElementById('pass_percentage').value.trim(),
+        };
+
+        try {
+            const response = await fetch(examForm.action, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => window.location.reload(), 600);
+            } else {
+                showToast(data.message || 'Failed to save exam.', 'error');
+                submitBtn.disabled = false;
+            }
+        } catch (err) {
+            showToast('Connection error occurred while saving the exam.', 'error');
+            submitBtn.disabled = false;
+        }
+    });
+
+    // Publish / Unpublish toggle
+    document.querySelectorAll('.publish-exam-btn').forEach(btn => {
+        btn.addEventListener('click', async function () {
+            const id = this.dataset.id;
+            this.disabled = true;
+            try {
+                const response = await fetch(`/exams/${id}/publish`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                });
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    showToast(data.message, 'success');
+                    setTimeout(() => window.location.reload(), 500);
+                } else {
+                    showToast(data.message || 'Failed to update exam.', 'error');
+                    this.disabled = false;
+                }
+            } catch (err) {
+                showToast('Connection error occurred.', 'error');
+                this.disabled = false;
+            }
+        });
+    });
+
+    // Delete exam
+    document.querySelectorAll('.delete-exam-btn').forEach(btn => {
+        btn.addEventListener('click', async function () {
+            const id = this.dataset.id;
+            const title = this.dataset.title;
+            if (!confirm(`Are you sure you want to permanently delete "${title}"?`)) return;
+
+            this.disabled = true;
+            try {
+                const response = await fetch(`/exams/${id}/delete`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                });
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    showToast(data.message, 'success');
+                    setTimeout(() => window.location.reload(), 500);
+                } else {
+                    showToast(data.message || 'Failed to delete exam.', 'error');
+                    this.disabled = false;
+                }
+            } catch (err) {
+                showToast('Connection error occurred.', 'error');
+                this.disabled = false;
+            }
+        });
+    });
+</script>
+{% endblock %}

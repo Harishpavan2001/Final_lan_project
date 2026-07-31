@@ -96,9 +96,10 @@ def create_app(config_name="default"):
     login_manager.init_app(app)
 
     # Register blueprints (imported locally to avoid circular dependencies)
-    from app.app import main_bp, auth_bp
+    from app.app import main_bp, auth_bp, student_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(student_bp)
 
     # Core internal routes for health checking
     @app.route("/health", methods=["GET"])

@@ -5,6 +5,24 @@
             "description": "Admin Loopback",
             "added_by": "system",
             "added_at": ""
+        },
+        {
+            "ip": "192.168.1.15",
+            "description": "Lab PC 15",
+            "added_by": "testadmin",
+            "added_at": "2026-07-21 20:52:48"
+        },
+        {
+            "ip": "127.0.0.17",
+            "description": "lab pc 14",
+            "added_by": "testadmin",
+            "added_at": "2026-07-26 21:46:39"
+        },
+        {
+            "ip": "127.0.0.8",
+            "description": "rohith",
+            "added_by": "testadmin",
+            "added_at": "2026-07-31 19:44:15"
         }
     ]
 }

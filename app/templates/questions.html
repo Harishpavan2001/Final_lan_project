@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block title %}LAN Gateway - Questions: {{ exam.title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .dashboard-container { max-width: 1150px; width: 95%; margin: 2rem auto; }
+
+    .nav-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1.25rem;
+    }
+
+    .logo-section { display: flex; flex-direction: column; }
+    .logo-title {
+        font-size: 1.35rem; font-weight: 700;
+        background: linear-gradient(to right, #a5b4fc, #818cf8);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .logo-subtitle {
+        font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;
+        letter-spacing: 0.1em; font-weight: 600; margin-top: 0.1rem;
+    }
+
+    .user-badge { display: flex; align-items: center; gap: 1rem; }
+    .user-name { font-size: 0.88rem; color: var(--text-muted); }
+
+    .exam-meta {
+        display: flex; gap: 1.5rem; font-size: 0.82rem; color: var(--text-muted);
+        margin-bottom: 1.75rem; flex-wrap: wrap;
+    }
+    .exam-meta strong { color: var(--text-main); }
+
+    .grid-layout { display: grid; grid-template-columns: 1.7fr 1fr; gap: 2rem; }
+    @media (max-width: 860px) { .grid-layout { grid-template-columns: 1fr; } }
+
+    .question-card {
+        background: rgba(15, 23, 42, 0.3);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+    }
+
+    .question-card .q-header {
+        display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.75rem;
+    }
+
+    .q-index { color: #a5b4fc; font-weight: 700; font-size: 0.85rem; }
+    .q-text { font-size: 0.92rem; margin-bottom: 0.85rem; line-height: 1.5; }
+
+    .option-list { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .option-item {
+        font-size: 0.82rem; padding: 0.5rem 0.75rem; border-radius: 8px;
+        background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+    }
+    .option-item.correct { border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.08); color: #a7f3d0; }
+
+    .q-marks { display: flex; gap: 1rem; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+    .q-marks .neg { color: #fca5a5; }
+
+    .action-btns { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .action-btns .btn { padding: 0.35rem 0.7rem; font-size: 0.72rem; }
+
+    .form-panel {
+        background: rgba(15, 23, 42, 0.35); padding: 1.75rem; border-radius: 12px;
+        border: 1px solid var(--border); align-self: start; margin-bottom: 1.5rem;
+    }
+
+    textarea {
+        width: 100%; background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border);
+        border-radius: 8px; padding: 0.75rem 1rem; color: var(--text-main);
+        font-size: 0.9rem; resize: vertical; min-height: 60px;
+    }
+    textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow); }
+
+    select {
+        width: 100%; background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border);
+        border-radius: 8px; padding: 0.75rem 1rem; color: var(--text-main); font-size: 0.9rem;
+    }
+    select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow); }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+    .empty-state { text-align: center; padding: 3rem; color: var(--text-muted); font-style: italic; }
+
+    input[type="file"] {
+        width: 100%; font-size: 0.82rem; color: var(--text-muted);
+        background: rgba(15, 23, 42, 0.5); border: 1px dashed var(--border);
+        border-radius: 8px; padding: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="glass-card animate-fade-in" style="padding: 2.25rem;">
+
+        <header class="nav-header">
+            <div class="logo-section">
+                <div class="logo-title">Question Bank</div>
+                <div class="logo-subtitle">{{ exam.title }}</div>
+            </div>
+            <div class="user-badge">
+                <a href="{{ url_for('main.exams') }}" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Back to Exams</a>
+                <span class="user-name">Signed in as <strong>{{ current_user.username }}</strong></span>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</a>
+            </div>
+        </header>
+
+        <div class="exam-meta">
+            <span>Total Questions: <strong>{{ questions|length }}</strong></span>
+            <span>Total Marks: <strong>{{ total_marks }}</strong></span>
+            <span>Duration: <strong>{{ exam.duration_minutes }} min</strong></span>
+        </div>
+
+        <!-- Flash message display container -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="flash {{ category }}">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        <div class="grid-layout">
+
+            <!-- LEFT PANEL: Question List -->
+            <div>
+                <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: #a5b4fc;">Questions</h3>
+
+                <div id="questions-list">
+                    {% if questions %}
+                        {% for q in questions %}
+                        <div class="question-card" id="question-card-{{ q.id }}">
+                            <div class="q-header">
+                                <span class="q-index">Q{{ loop.index }}.</span>
+                                <div class="action-btns">
+                                    <button type="button" class="btn btn-secondary edit-question-btn"
+                                        data-id="{{ q.id }}"
+                                        data-text="{{ q.question_text }}"
+                                        data-a="{{ q.option_a }}"
+                                        data-b="{{ q.option_b }}"
+                                        data-c="{{ q.option_c }}"
+                                        data-d="{{ q.option_d }}"
+                                        data-correct="{{ q.correct_option }}"
+                                        data-marks="{{ q.marks }}"
+                                        data-negative="{{ q.negative_marks }}">Edit</button>
+                                    <button type="button" class="btn btn-danger delete-question-btn" data-id="{{ q.id }}">Delete</button>
+                                </div>
+                            </div>
+                            <div class="q-text">{{ q.question_text }}</div>
+                            <div class="option-list">
+                                <div class="option-item {{ 'correct' if q.correct_option == 'A' }}">A. {{ q.option_a }}</div>
+                                <div class="option-item {{ 'correct' if q.correct_option == 'B' }}">B. {{ q.option_b }}</div>
+                                <div class="option-item {{ 'correct' if q.correct_option == 'C' }}">C. {{ q.option_c }}</div>
+                                <div class="option-item {{ 'correct' if q.correct_option == 'D' }}">D. {{ q.option_d }}</div>
+                            </div>
+                            <div class="q-marks">
+                                <span>Marks: <strong>{{ q.marks }}</strong></span>
+                                <span class="neg">Negative: <strong>{{ q.negative_marks }}</strong></span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="question-card empty-state" id="empty-question-state">No questions added yet. Use the form to add your first question, or import from a CSV file.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: Add / Edit + CSV Import -->
+            <div>
+                <div class="form-panel">
+                    <h3 id="form-title" style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1.25rem; color: #a5b4fc;">Add Question</h3>
+
+                    <form id="question-form" method="POST" action="{{ url_for('main.create_question', exam_id=exam.id) }}">
+                        <input type="hidden" id="question-id" value="">
+                        <div class="form-group">
+                            <label for="question_text">Question Text</label>
+                            <textarea id="question_text" name="question_text" placeholder="Enter the question" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="option_a">Option A</label>
+                            <input type="text" id="option_a" name="option_a" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="option_b">Option B</label>
+                            <input type="text" id="option_b" name="option_b" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="option_c">Option C</label>
+                            <input type="text" id="option_c" name="option_c" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="option_d">Option D</label>
+                            <input type="text" id="option_d" name="option_d" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="correct_option">Correct Answer</label>
+                            <select id="correct_option" name="correct_option" required>
+                                <option value="">Select correct option</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                            </select>
+                        </div>
+                        <div class="two-col" style="margin-bottom: 1.75rem;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="marks">Marks</label>
+                                <input type="number" id="marks" name="marks" value="1" min="0.1" step="0.1" required>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="negative_marks">Negative Marks</label>
+                                <input type="number" id="negative_marks" name="negative_marks" value="0" min="0" step="0.1">
+                            </div>
+                        </div>
+                        <button type="submit" id="question-submit-btn" class="btn" style="width: 100%;">Add Question</button>
+                        <button type="button" id="question-cancel-btn" class="btn btn-secondary" style="width: 100%; margin-top: 0.6rem; display: none;">Cancel Edit</button>
+                    </form>
+                </div>
+
+                <div class="form-panel">
+                    <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: #a5b4fc;">Import from CSV</h3>
+                    <form id="csv-import-form" method="POST" action="{{ url_for('main.import_questions', exam_id=exam.id) }}" enctype="multipart/form-data">
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <input type="file" id="csv_file" name="csv_file" accept=".csv" required>
+                        </div>
+                        <button type="submit" id="csv-submit-btn" class="btn btn-secondary" style="width: 100%;">Import Questions</button>
+                    </form>
+                    <p style="margin-top: 1rem; font-size: 0.72rem; color: var(--text-muted); line-height: 1.5;">
+                        Columns: <code>question_text, option_a, option_b, option_c, option_d, correct_option, marks, negative_marks</code><br>
+                        (<code>marks</code> defaults to 1, <code>negative_marks</code> defaults to 0 if omitted)
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const questionForm = document.getElementById('question-form');
+    const questionIdField = document.getElementById('question-id');
+    const formTitle = document.getElementById('form-title');
+    const submitBtn = document.getElementById('question-submit-btn');
+    const cancelBtn = document.getElementById('question-cancel-btn');
+    const createActionUrl = "{{ url_for('main.create_question', exam_id=exam.id) }}";
+
+    function resetForm() {
+        questionForm.reset();
+        questionIdField.value = '';
+        questionForm.action = createActionUrl;
+        formTitle.innerText = 'Add Question';
+        submitBtn.innerText = 'Add Question';
+        cancelBtn.style.display = 'none';
+    }
+
+    cancelBtn.addEventListener('click', resetForm);
+
+    document.querySelectorAll('.edit-question-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const id = this.dataset.id;
+            document.getElementById('question_text').value = this.dataset.text;
+            document.getElementById('option_a').value = this.dataset.a;
+            document.getElementById('option_b').value = this.dataset.b;
+            document.getElementById('option_c').value = this.dataset.c;
+            document.getElementById('option_d').value = this.dataset.d;
+            document.getElementById('correct_option').value = this.dataset.correct;
+            document.getElementById('marks').value = this.dataset.marks;
+            document.getElementById('negative_marks').value = this.dataset.negative;
+
+            questionIdField.value = id;
+            questionForm.action = `/questions/${id}/edit`;
+            formTitle.innerText = `Edit Question #${id}`;
+            submitBtn.innerText = 'Save Changes';
+            cancelBtn.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+
+    questionForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        submitBtn.disabled = true;
+
+        const payload = {
+            question_text: document.getElementById('question_text').value.trim(),
+            option_a: document.getElementById('option_a').value.trim(),
+            option_b: document.getElementById('option_b').value.trim(),
+            option_c: document.getElementById('option_c').value.trim(),
+            option_d: document.getElementById('option_d').value.trim(),
+            correct_option: document.getElementById('correct_option').value,
+            marks: document.getElementById('marks').value,
+            negative_marks: document.getElementById('negative_marks').value,
+        };
+
+        try {
+            const response = await fetch(questionForm.action, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => window.location.reload(), 600);
+            } else {
+                showToast(data.message || 'Failed to save question.', 'error');
+                submitBtn.disabled = false;
+            }
+        } catch (err) {
+            showToast('Connection error occurred while saving the question.', 'error');
+            submitBtn.disabled = false;
+        }
+    });
+
+    document.querySelectorAll('.delete-question-btn').forEach(btn => {
+        btn.addEventListener('click', async function () {
+            const id = this.dataset.id;
+            if (!confirm('Are you sure you want to permanently delete this question?')) return;
+
+            this.disabled = true;
+            try {
+                const response = await fetch(`/questions/${id}/delete`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                });
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    showToast(data.message, 'success');
+                    setTimeout(() => window.location.reload(), 500);
+                } else {
+                    showToast(data.message || 'Failed to delete question.', 'error');
+                    this.disabled = false;
+                }
+            } catch (err) {
+                showToast('Connection error occurred.', 'error');
+                this.disabled = false;
+            }
+        });
+    });
+
+    // CSV import (multipart form, not JSON, but we still want AJAX + toast feedback)
+    const csvForm = document.getElementById('csv-import-form');
+    const csvSubmitBtn = document.getElementById('csv-submit-btn');
+
+    csvForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        csvSubmitBtn.disabled = true;
+
+        const formData = new FormData(csvForm);
+        try {
+            const response = await fetch(csvForm.action, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' },
+                body: formData,
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => window.location.reload(), 900);
+            } else {
+                showToast(data.message || 'CSV import failed.', 'error');
+                csvSubmitBtn.disabled = false;
+            }
+        } catch (err) {
+            showToast('Connection error occurred during import.', 'error');
+            csvSubmitBtn.disabled = false;
+        }
+    });
+</script>
+{% endblock %}

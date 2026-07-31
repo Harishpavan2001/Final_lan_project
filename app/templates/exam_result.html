@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}LAN Gateway - Result: {{ exam.title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .result-container { max-width: 560px; width: 95%; margin: 2rem auto; text-align: center; }
+
+    .score-circle {
+        width: 140px; height: 140px; border-radius: 50%;
+        border: 4px solid rgba(129, 140, 248, 0.4);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        margin: 1.5rem auto; background: rgba(129, 140, 248, 0.06);
+    }
+    .score-value { font-size: 2rem; font-weight: 800; color: #a5b4fc; }
+    .score-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.2rem; }
+
+    .stats-row { display: flex; justify-content: center; gap: 2rem; margin: 1.75rem 0; flex-wrap: wrap; }
+    .stat-item { text-align: center; }
+    .stat-value { font-size: 1.3rem; font-weight: 700; }
+    .stat-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.2rem; }
+
+    .result-badge {
+        display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 1.1rem;
+        border-radius: 999px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.05em; margin-top: 0.75rem;
+    }
+    .result-badge.pass { background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); color: #a7f3d0; }
+    .result-badge.fail { background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="result-container">
+    <div class="glass-card animate-fade-in" style="padding: 2.5rem;">
+
+        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Exam Submitted</div>
+        <h2 style="font-size: 1.3rem; font-weight: 700; margin-top: 0.5rem; color: #a5b4fc;">{{ exam.title }}</h2>
+
+        <div class="score-circle">
+            <div class="score-value">{{ attempt.score }}</div>
+            <div class="score-label">/ {{ total_possible }} marks</div>
+        </div>
+
+        <span class="result-badge {{ 'pass' if attempt.passed else 'fail' }}">
+            {{ '✓ Pass' if attempt.passed else '✗ Fail' }}
+        </span>
+
+        <div class="stats-row">
+            <div class="stat-item">
+                <div class="stat-value">{{ attempt.percentage }}%</div>
+                <div class="stat-label">Percentage</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ answered_count }} / {{ total_questions }}</div>
+                <div class="stat-label">Answered</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ attempt.submitted_at.strftime('%d %b, %H:%M') }}</div>
+                <div class="stat-label">Submitted At</div>
+            </div>
+        </div>
+
+        <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin-top: 1rem;">
+            Your responses have been recorded and scored. Contact your administrator if you believe there is a discrepancy.
+        </p>
+
+        <a href="{{ url_for('student.dashboard') }}" class="btn" style="margin-top: 1.5rem; display: inline-block;">Back to Dashboard</a>
+
+    </div>
+</div>
+{% endblock %}

@@ -177,6 +177,7 @@
                 <div class="logo-subtitle">Access Management Gateway</div>
             </div>
             <div class="user-badge">
+                <a href="{{ url_for('main.exams') }}" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Manage Exams</a>
                 <span class="user-name">Signed in as <strong>{{ current_user.username }}</strong></span>
                 <a href="{{ url_for('auth.logout') }}" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</a>
             </div>

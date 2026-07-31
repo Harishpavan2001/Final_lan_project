@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block title %}LAN Gateway - {{ exam.title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .exam-container { max-width: 780px; width: 95%; margin: 2rem auto; }
+
+    .exam-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1.25rem;
+        flex-wrap: wrap; gap: 1rem;
+    }
+
+    .exam-title-block .exam-title { font-size: 1.2rem; font-weight: 700; color: #a5b4fc; }
+    .exam-title-block .exam-sub { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.15rem; }
+
+    .timer-box {
+        display: flex; align-items: center; gap: 0.5rem;
+        background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #fca5a5; padding: 0.5rem 1rem; border-radius: 10px;
+        font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums;
+    }
+    .timer-box.warning { background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.35); color: #fcd34d; }
+
+    .progress-bar-track {
+        width: 100%; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.06);
+        margin-bottom: 1.75rem; overflow: hidden;
+    }
+    .progress-bar-fill { height: 100%; background: linear-gradient(to right, #818cf8, #a5b4fc); transition: width 0.3s ease; }
+
+    .question-number { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .question-text { font-size: 1.05rem; font-weight: 500; line-height: 1.6; margin-bottom: 1.75rem; }
+
+    .option-choice {
+        display: flex; align-items: center; gap: 0.85rem;
+        padding: 0.9rem 1.1rem; border-radius: 10px; border: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.3); margin-bottom: 0.7rem; cursor: pointer;
+        transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .option-choice:hover { border-color: rgba(165, 180, 252, 0.4); }
+    .option-choice.selected { border-color: #818cf8; background: rgba(129, 140, 248, 0.1); }
+
+    .option-choice input[type="radio"] { accent-color: #818cf8; width: 17px; height: 17px; cursor: pointer; }
+    .option-letter { font-weight: 700; color: #a5b4fc; width: 1.2rem; }
+    .option-label { font-size: 0.92rem; }
+
+    .nav-row {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-top: 2rem; gap: 1rem; flex-wrap: wrap;
+    }
+
+    .save-indicator { font-size: 0.75rem; color: var(--text-muted); min-height: 1rem; }
+    .save-indicator.saved { color: #a7f3d0; }
+    .save-indicator.saving { color: #bae6fd; }
+
+    .palette { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+    .palette-btn {
+        width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.4); color: var(--text-muted); font-size: 0.78rem;
+        cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .palette-btn.answered { border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.12); color: #a7f3d0; }
+    .palette-btn.current { border-color: #818cf8; box-shadow: 0 0 0 2px var(--primary-glow); color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="exam-container">
+    <div class="glass-card animate-fade-in" style="padding: 2.25rem;">
+
+        <header class="exam-header">
+            <div class="exam-title-block">
+                <div class="exam-title">{{ exam.title }}</div>
+                <div class="exam-sub">Exam In Progress</div>
+            </div>
+            <div id="timer-box" class="timer-box">⏱ <span id="timer-display">--:--</span></div>
+        </header>
+
+        <div class="progress-bar-track">
+            <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+        </div>
+
+        <div class="question-number">Question <span id="q-current-num">1</span> of <span id="q-total-num">{{ questions_json|length }}</span></div>
+        <div class="question-text" id="question-text-display"></div>
+
+        <div id="options-container"></div>
+
+        <div class="nav-row">
+            <button type="button" id="prev-btn" class="btn btn-secondary">← Previous</button>
+            <span id="save-indicator" class="save-indicator"></span>
+            <div style="display: flex; gap: 0.6rem;">
+                <button type="button" id="next-btn" class="btn btn-secondary">Next →</button>
+                <button type="button" id="submit-btn" class="btn btn-danger" style="display: none;">Submit Exam</button>
+            </div>
+        </div>
+
+        <div class="palette" id="question-palette"></div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const examId = {{ exam.id }};
+    const questions = {{ questions_json|tojson }};
+    const deadlineIso = {{ deadline_iso|tojson }};
+    const submitUrl = "{{ url_for('student.submit_exam', exam_id=exam.id) }}";
+    const answerUrl = "{{ url_for('student.save_answer', exam_id=exam.id) }}";
+    const resultUrlBase = "{{ url_for('student.exam_result', exam_id=exam.id) }}";
+
+    let currentIndex = 0;
+    let examLocked = false; // true once submission starts/succeeds, blocks all further interaction
+    const answersState = {}; // question_id -> selected_option
+    questions.forEach(q => { answersState[q.id] = q.selected || null; });
+
+    // Restore the question the student was viewing before a browser refresh.
+    // (Answers/timer are already safe via the server; this just avoids jumping back to Q1.)
+    const positionKey = `exam-${examId}-question-index`;
+    const storedIndex = parseInt(sessionStorage.getItem(positionKey), 10);
+    if (!isNaN(storedIndex) && storedIndex >= 0 && storedIndex < questions.length) {
+        currentIndex = storedIndex;
+    }
+
+    const questionTextEl = document.getElementById('question-text-display');
+    const optionsContainer = document.getElementById('options-container');
+    const qCurrentNumEl = document.getElementById('q-current-num');
+    const progressFillEl = document.getElementById('progress-bar-fill');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const submitBtn = document.getElementById('submit-btn');
+    const saveIndicator = document.getElementById('save-indicator');
+    const paletteEl = document.getElementById('question-palette');
+
+    function renderPalette() {
+        paletteEl.innerHTML = '';
+        questions.forEach((q, idx) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'palette-btn' + (answersState[q.id] ? ' answered' : '') + (idx === currentIndex ? ' current' : '');
+            btn.innerText = idx + 1;
+            btn.disabled = examLocked;
+            btn.addEventListener('click', () => { if (examLocked) return; currentIndex = idx; renderQuestion(); });
+            paletteEl.appendChild(btn);
+        });
+    }
+
+    function renderQuestion() {
+        sessionStorage.setItem(positionKey, String(currentIndex));
+
+        const q = questions[currentIndex];
+        questionTextEl.innerText = q.question_text;
+        qCurrentNumEl.innerText = currentIndex + 1;
+        progressFillEl.style.width = `${((currentIndex + 1) / questions.length) * 100}%`;
+
+        optionsContainer.innerHTML = '';
+        ['A', 'B', 'C', 'D'].forEach(letter => {
+            const wrapper = document.createElement('label');
+            wrapper.className = 'option-choice' + (answersState[q.id] === letter ? ' selected' : '');
+
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = `question-${q.id}`;
+            radio.value = letter;
+            radio.checked = answersState[q.id] === letter;
+            radio.disabled = examLocked;
+            radio.addEventListener('change', () => selectOption(q.id, letter));
+
+            const letterSpan = document.createElement('span');
+            letterSpan.className = 'option-letter';
+            letterSpan.innerText = letter + '.';
+
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'option-label';
+            labelSpan.innerText = q.options[letter];
+
+            wrapper.appendChild(radio);
+            wrapper.appendChild(letterSpan);
+            wrapper.appendChild(labelSpan);
+            optionsContainer.appendChild(wrapper);
+        });
+
+        prevBtn.disabled = examLocked || currentIndex === 0;
+        if (currentIndex === questions.length - 1) {
+            nextBtn.style.display = 'none';
+            submitBtn.style.display = 'inline-flex';
+            submitBtn.disabled = examLocked;
+        } else {
+            nextBtn.style.display = 'inline-flex';
+            nextBtn.disabled = examLocked;
+            submitBtn.style.display = 'none';
+        }
+
+        saveIndicator.innerText = '';
+        saveIndicator.className = 'save-indicator';
+        renderPalette();
+    }
+
+    async function selectOption(questionId, letter) {
+        if (examLocked) return;
+        answersState[questionId] = letter;
+        renderQuestion();
+
+        saveIndicator.innerText = 'Saving…';
+        saveIndicator.className = 'save-indicator saving';
+
+        try {
+            const response = await fetch(answerUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ question_id: questionId, selected_option: letter }),
+            });
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                saveIndicator.innerText = '✓ Saved';
+                saveIndicator.className = 'save-indicator saved';
+            } else if (data.expired) {
+                window.location.href = resultUrlBase;
+            } else {
+                saveIndicator.innerText = 'Save failed — will retry on next change';
+                saveIndicator.className = 'save-indicator';
+            }
+        } catch (err) {
+            saveIndicator.innerText = 'Connection error while saving';
+            saveIndicator.className = 'save-indicator';
+        }
+    }
+
+    prevBtn.addEventListener('click', () => { if (!examLocked && currentIndex > 0) { currentIndex--; renderQuestion(); } });
+    nextBtn.addEventListener('click', () => { if (!examLocked && currentIndex < questions.length - 1) { currentIndex++; renderQuestion(); } });
+
+    async function doSubmit(auto) {
+        if (examLocked) return; // already submitting or submitted — never send a second request
+        examLocked = true;
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Submitting…';
+        renderQuestion(); // disable all inputs/nav immediately
+
+        try {
+            const response = await fetch(submitUrl, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' },
+            });
+            const data = await response.json();
+            if (data.success) {
+                sessionStorage.removeItem(positionKey);
+                window.location.href = data.redirect_url || resultUrlBase;
+            } else {
+                showToast(data.message || 'Failed to submit exam.', 'error');
+                examLocked = false;
+                submitBtn.innerText = 'Submit Exam';
+                renderQuestion();
+            }
+        } catch (err) {
+            if (auto) {
+                // Server-side expiry is the source of truth: even if this request failed to
+                // reach the server, revisiting /attempt or /result will auto-finalize it there.
+                sessionStorage.removeItem(positionKey);
+                window.location.href = resultUrlBase;
+            } else {
+                showToast('Connection error while submitting.', 'error');
+                examLocked = false;
+                submitBtn.innerText = 'Submit Exam';
+                renderQuestion();
+            }
+        }
+    }
+
+    submitBtn.addEventListener('click', () => {
+        if (examLocked) return;
+        const unanswered = questions.filter(q => !answersState[q.id]).length;
+        const msg = unanswered > 0
+            ? `You have ${unanswered} unanswered question(s). Submit anyway?`
+            : 'Are you sure you want to submit the exam?';
+        if (confirm(msg)) doSubmit(false);
+    });
+
+    // --- Timer ---
+    const timerDisplay = document.getElementById('timer-display');
+    const timerBox = document.getElementById('timer-box');
+    const deadline = new Date(deadlineIso).getTime();
+
+    function tick() {
+        const remainingMs = deadline - Date.now();
+        if (remainingMs <= 0) {
+            timerDisplay.innerText = '00:00';
+            doSubmit(true); // doSubmit itself is idempotent via examLocked, safe to call every tick
+            return;
+        }
+
+        const totalSeconds = Math.floor(remainingMs / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        timerDisplay.innerText = hours > 0
+            ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+            : `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+        if (remainingMs <= 5 * 60 * 1000) {
+            timerBox.classList.add('warning');
+        }
+    }
+
+    tick();
+    setInterval(tick, 1000);
+
+    // Warn before leaving the tab mid-exam
+    window.addEventListener('beforeunload', function (e) {
+        if (!examLocked) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    renderQuestion();
+</script>
+{% endblock %}

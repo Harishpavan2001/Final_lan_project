@@ -27,9 +27,17 @@
     <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 2rem;">Security Gateway Enforced</p>
     
     <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; padding: 1.25rem; margin-bottom: 2rem;">
+        {% if reason == 'device_mismatch' %}
+        <p style="font-size: 0.92rem; line-height: 1.6; color: #fca5a5;">
+            This exam session is locked to the device/network it was started from. Your current IP address
+            <code style="background: rgba(0, 0, 0, 0.2); padding: 0.2rem 0.4rem; border-radius: 4px; font-weight: 600; color: #fecaca;">{{ ip }}</code>
+            does not match.
+        </p>
+        {% else %}
         <p style="font-size: 0.92rem; line-height: 1.6; color: #fca5a5;">
             Your client IP address <code style="background: rgba(0, 0, 0, 0.2); padding: 0.2rem 0.4rem; border-radius: 4px; font-weight: 600; color: #fecaca;">{{ ip }}</code> is not registered in the access whitelist configuration.
         </p>
+        {% endif %}
     </div>
     
     <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 2rem;">

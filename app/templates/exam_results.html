@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}LAN Gateway - Results: {{ exam.title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .dashboard-container { max-width: 1150px; width: 95%; margin: 2rem auto; }
+
+    .nav-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;
+    }
+    .logo-section { display: flex; flex-direction: column; }
+    .logo-title {
+        font-size: 1.35rem; font-weight: 700;
+        background: linear-gradient(to right, #a5b4fc, #818cf8);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .logo-subtitle { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; margin-top: 0.1rem; }
+    .user-badge { display: flex; align-items: center; gap: 1rem; }
+    .user-name { font-size: 0.88rem; color: var(--text-muted); }
+
+    .stats-grid {
+        display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.9rem; margin-bottom: 1.75rem;
+    }
+    @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 560px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .stat-card {
+        background: rgba(15, 23, 42, 0.35); border: 1px solid var(--border); border-radius: 10px;
+        padding: 0.9rem; text-align: center;
+    }
+    .stat-card .val { font-size: 1.25rem; font-weight: 700; }
+    .stat-card .lbl { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 0.15rem; }
+    .stat-card.pass .val { color: #a7f3d0; }
+    .stat-card.fail .val { color: #fca5a5; }
+
+    .table-container { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: rgba(15, 23, 42, 0.3); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.9rem 1rem; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    th { color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; background: rgba(15, 23, 42, 0.2); }
+    td { font-size: 0.86rem; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255, 255, 255, 0.015); }
+
+    .empty-state { text-align: center; padding: 3rem; color: var(--text-muted); font-style: italic; }
+
+    .result-pill {
+        display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem;
+        border-radius: 999px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .result-pass { background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25); color: #a7f3d0; }
+    .result-fail { background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: #fca5a5; }
+    .result-pending { background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.25); color: #cbd5e1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="glass-card animate-fade-in" style="padding: 2.25rem;">
+
+        <header class="nav-header">
+            <div class="logo-section">
+                <div class="logo-title">Result Dashboard</div>
+                <div class="logo-subtitle">{{ exam.title }}</div>
+            </div>
+            <div class="user-badge">
+                <a href="{{ url_for('main.exams') }}" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Back to Exams</a>
+                <span class="user-name">Signed in as <strong>{{ current_user.username }}</strong></span>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</a>
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card"><div class="val">{{ total_attempts }}</div><div class="lbl">Total Attempts</div></div>
+            <div class="stat-card"><div class="val">{{ submitted_count }}</div><div class="lbl">Submitted</div></div>
+            <div class="stat-card"><div class="val">{{ in_progress_count }}</div><div class="lbl">In Progress</div></div>
+            <div class="stat-card pass"><div class="val">{{ passed_count }}</div><div class="lbl">Passed</div></div>
+            <div class="stat-card fail"><div class="val">{{ failed_count }}</div><div class="lbl">Failed</div></div>
+            <div class="stat-card"><div class="val">{{ average_percentage }}%</div><div class="lbl">Average</div></div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Score</th>
+                        <th>Percentage</th>
+                        <th>Result</th>
+                        <th>Submitted At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if attempts %}
+                        {% for attempt in attempts %}
+                        <tr>
+                            <td>
+                                <strong>{{ attempt.student.full_name or attempt.student.username }}</strong>
+                                <div style="color: var(--text-muted); font-size: 0.76rem;">{{ attempt.student.username }}</div>
+                            </td>
+                            <td>
+                                {% if attempt.is_submitted %}
+                                    {{ attempt.score }} / {{ exam.total_marks }}
+                                {% else %}
+                                    <span style="color: var(--text-muted);">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if attempt.is_submitted %}
+                                    {{ attempt.percentage }}%
+                                {% else %}
+                                    <span style="color: var(--text-muted);">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if not attempt.is_submitted %}
+                                    <span class="result-pill result-pending">In Progress</span>
+                                {% elif attempt.passed %}
+                                    <span class="result-pill result-pass">Pass</span>
+                                {% else %}
+                                    <span class="result-pill result-fail">Fail</span>
+                                {% endif %}
+                            </td>
+                            <td style="color: var(--text-muted); font-size: 0.8rem;">
+                                {% if attempt.submitted_at %}
+                                    {{ attempt.submitted_at.strftime('%d %b %Y, %H:%M') }}
+                                {% else %}
+                                    &mdash;
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="5" class="empty-state">No student has attempted this exam yet.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <p style="margin-top: 1rem; font-size: 0.75rem; color: var(--text-muted);">
+            Passing threshold for this exam: <strong>{{ exam.pass_percentage }}%</strong>
+        </p>
+
+    </div>
+</div>
+{% endblock %}
